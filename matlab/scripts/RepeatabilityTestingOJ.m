@@ -7,22 +7,12 @@
 % juice are try4,5,&6. 
 
 %% Collection
-s          = whos('t*');
-structSize = size(s);
-ss         = structSize(1);
-j          = 'ttry'
 
 %% Close other figures
 close all
 
 % Autoplotter
-for i = 1:structSize(:,1);
-    c = ['try' (num2str(i)) '(:,1)'];
-    d = {'try' (num2str(i)) '(:,2)'};
-    plot(c,d)
-    hold on
-end
-    
+autplot(setsize,tws);
 % Plotting the raw data.
 plot(try1(:,1),try1(:,2))
 hold on
