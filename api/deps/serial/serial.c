@@ -54,10 +54,10 @@ int serialOpen(const char *port, unsigned int baud) {
             cfsetispeed(&options, B38400);
             cfsetospeed(&options, B38400);
             break;
-        case 76800:
-            cfsetispeed(&options, B76800);
-            cfsetospeed(&options, B76800);
-            break;
+            //case 76800:
+            //    cfsetispeed(&options, B76800);
+            //    cfsetospeed(&options, B76800);
+            //    break;
         case 115200:
             cfsetispeed(&options, B115200);
             cfsetospeed(&options, B115200);
