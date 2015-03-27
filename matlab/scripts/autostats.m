@@ -29,7 +29,7 @@ clear('rsq')
 f = 0;% Sets the first setnumber offset value.
 for c = 1:(ls/Setsize) % Setnumber
     clear('rsq')
-    for e = 1:(Setsize-1)% Arraynumber changing
+    for e = 1:(Setsize-1)% Arraynumber change
     clear('rsqs')
     for i = 1:(Setsize-e)
         v       = e-1;% Arraynumber
@@ -41,6 +41,13 @@ for c = 1:(ls/Setsize) % Setnumber
     x        = x2+1;% Setting next index values for rsq array
     y        = x+d-2;% """"
     end
+    %% Anova Done by Set
+[p,~,stats] = anova1(Ss(:,(1+f):(Setsize+f)),[],'off');
+    if p < .05
+        figure(3)
+        multcompare(stats);
+    end
+    %% Continue r-squared
 f  = (Setsize*c);% Setting the next Setnumber offset value
 x  = 1;% Resetting next index values for rsq array
 y  = Setsize-1;%""""

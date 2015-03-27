@@ -3,7 +3,7 @@
 %% UI
 settings = Biochipui();%ui Prompt
 %% Import
-S        = importdata('ttry2.tsv');%imports tests Data
+S        = importdata('ttry.tsv');%imports tests Data
 Setsize  = str2num(settings{1});%Getting out Setsize
 %% Plot raw data
 if settings{2} == 'Y'
@@ -15,4 +15,5 @@ if settings{3} == 'Y'
     autoplot(Setsize,Sf,'mV','nA','Raw Data') %Plotting Filtered data
 end
 %% Autostats
-[rsq] = autostats(Setsize,S)
+[rsq] = autostats(Setsize,Sf)
+
