@@ -3,7 +3,7 @@
 %% UI
 settings = Biochipui();%ui Prompt
 %% Import
-S        = importdata('ttry.tsv');%imports tests Data
+S        = importdata('ttry2.tsv');%imports tests Data
 Setsize  = str2num(settings{1});%Getting out Setsize
 %% Plot raw data
 if settings{2} == 'Y'

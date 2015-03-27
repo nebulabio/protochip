@@ -1,4 +1,4 @@
-function [ p,rsq,PLAfit ] = Linearfit( PLACG,PLAD )
+function [rsq] = Linearfit( PLACG,PLAD )
 p = polyfit(PLACG,PLAD,1);
 PLAfit=polyval(p,PLACG);
 PLAresid = PLAD - PLAfit;
