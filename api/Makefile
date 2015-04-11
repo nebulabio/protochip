@@ -1,8 +1,10 @@
 
-api: main.c deps/serial/serial.c
-	$(CC) -std=c99 -Wall $^ -o $@
+out = api
+
+build: main.c deps/serial/serial.c
+	$(CC) -std=c99 -Wall $^ -o $(out)
 
 clean:
-	rm -rf main
+	rm -rf $(out)
 
-.PHONY: api clean
+.PHONY: build clean
