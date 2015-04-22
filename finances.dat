@@ -1,0 +1,17 @@
+; -*- ledger -*-
+
+;;FIXME: add Andres' purchases from earlier here
+
+2015/04/17 Polysciences, Inc. 
+    ;Polyethyleneimine, branched (50% soln. in water, MW 750,000)
+    Expenses:Wetware                       $ 189.00
+    Expenses:Shipping                      $  18.15
+    Assets:bsima:Credit                    $-207.15 ; from my bank acct statement
+
+2015/04/21 Abcam Inc.
+    ;Anti-Cortisol antibody [XM210] 500mcg
+    Expenses:Wetware                       $ 382.00
+    ;Alkaline phosphatase conjugation kit 100 mcg
+    Expenses:Wetware                       $ 225.00
+    Expenses:Shipping                      $  45.00
+    Assets:bsima:Credit                    $-652.00
