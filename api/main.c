@@ -30,19 +30,33 @@ typedef struct {
 } profile;
 
 
+typedef struct {
+  char    name[15];
+  int16_t freq;
+  int16_t start;
+  int16_t stop;
+  int16_t height;
+  int16_t increment;
+  uint8_t curr_range;
+} swv;
+
+
+
 int fd = -1;
 
-void exithandler() {
-  printf("Closing the connection.\n");
-  serialClose(fd);
+
+void exithandler() { 
+  printf("Closing the connection.\n"); serialClose(fd);
 }
 
+void print_profile(profile data, int fd) {
+  printf("\n"); // Begin
+  printf("File descriptor is %i\n", fd);
 
-void printProfile(profile data) {
   printf("  Description  \t Data\tAddress\t\tSize\n");
   printf("---------------------------------------------------\n");
   printf("         Name:\t%s\t%p\t%lu\n", data.name,       &data.name,       sizeof(data.name));
-  printf("         Type:\t%d\t%p\t%lu\n", data.type,       &data.type,       sizeof(data.type));
+  printf("         Type:\t%u\t%p\t%lu\n", data.type,       &data.type,       sizeof(data.type));
   printf("  Operation 1:\t%d\t%p\t%lu\n", data.op1,        &data.op1,        sizeof(data.op1));
   printf("  Operation 2:\t%d\t%p\t%lu\n", data.op2,        &data.op2,        sizeof(data.op2));
   printf("  Operation 3:\t%d\t%p\t%lu\n", data.op3,        &data.op3,        sizeof(data.op3));
@@ -51,19 +65,59 @@ void printProfile(profile data) {
   printf("  Operation 6:\t%d\t%p\t%lu\n", data.op6,        &data.op6,        sizeof(data.op6));
   printf("Current Range:\t%d\t%p\t%lu\n", data.curr_range, &data.curr_range, sizeof(data.curr_range));
   printf("---------------------------------------------------\n");
-  printf("  Total Bytes: \t %lu \n", sizeof(data));
+  printf("  Total Bytes: \t %lu\n\n", sizeof(data));
 
+  for (int p = 0; p < sizeof(data.name); p++) {
+    printf("\tname[%i]:\t%x\n", p, data.name[p]);
+  }
+
+  printf("\n"); // End of printer
 }
 
-/**
- * `conn_cheapstat()` - Opens a port to the Cheapstat
- * 
- * Returns the file descriptor on success or -1 on error.
- *
-*/
+void print_swv(swv data, int fd) {
+  printf("\n"); // Begin
+  printf("File descriptor is %i\n", fd);
+
+  printf("  Description  \t Data\tAddress\t\tSize\n");
+  printf("---------------------------------------------------\n");
+  printf("         Name:\t%s\t%p\t%lu\n", data.name,       &data.name,       sizeof(data.name));
+  printf("    Frequency:\t%u\t%p\t%lu\n", data.freq,       &data.freq,       sizeof(data.freq));
+  printf("        Start:\t%i\t%p\t%lu\n", data.start,      &data.start,      sizeof(data.start));
+  printf("         Stop:\t%d\t%p\t%lu\n", data.stop,       &data.stop,       sizeof(data.stop));
+  printf("       Height:\t%d\t%p\t%lu\n", data.height,     &data.height,     sizeof(data.height));
+  printf("    Increment:\t%d\t%p\t%lu\n", data.increment,  &data.increment,  sizeof(data.increment));
+  printf("Current Range:\t%d\t%p\t%lu\n", data.curr_range, &data.curr_range, sizeof(data.curr_range));
+  printf("---------------------------------------------------\n");
+  printf("  Total Bytes: \t %lu\n\n", sizeof(data));
+
+  for (int p = 0; p < sizeof(data.name); p++) {
+    printf("\tname[%i]:\t%x\n", p, data.name[p]);
+  }
+
+  printf("\n"); // End of printer
+}
+
+
+void take_ownership(char *port) {
+  int  user = getuid(); // FIXME: switch to `getuid`?
+  int group = getgid();
+
+#ifdef DEBUG
+  printf("\nUID:\t%d\nGID:\t%d\n", user, group);
+  printf("Port is: %s", port);
+#endif
+
+  // int chown(const char *path, uid_t owner, gid_t group);
+  if (chown(port, user, group) == -1) { 
+    printf("Error (can't `chown`): %s\n", strerror(errno)); 
+    exit(EXIT_FAILURE); 
+  }
+}
+
 
 // FIXME: I should check permissions on the port to make sure it is openable
-
+// use int chown(const char *path, uid_t owner, gid_t group);
+// man 2 chown
 int main(int argc, char **argv) {
   if ((argc == 2) && (strcmp(argv[1], "-l") == 0)) {
     char **ports = getSerialPorts();
@@ -74,7 +128,12 @@ int main(int argc, char **argv) {
     free(ports);
 
   } else if (argc == 3) {
-    fd = serialOpen(argv[1], atoi(argv[2]));
+    char *port = argv[1];
+    int   baud = atoi(argv[2]);
+
+    take_ownership(port);
+
+    fd = serialOpen(port, baud);
     
     if (fd == -1) {
       printf("Could not open %s with %d!\n", argv[1], atoi(argv[2]));
@@ -89,19 +148,19 @@ int main(int argc, char **argv) {
 
     while (fd != -1) {
       if (serialHasChar(fd)) {
-        // need to use pointer arithmetic - track my location in the stream
-        // with a pointer and de-reference the pointer to print the value of the input
 
-        printf("\n"); // Begin
+        swv d;
+        read(fd, &d, 29);
+        print_swv(d, fd);
 
-        printf("File descriptor is %i\n", fd);
+        //short int type;
         
-        profile p;
-        read(fd, &p, 29);
 
-        printProfile(p);
+        //printf("Getting results for: %s", type);
         
-        printf("\n"); // End of main program
+               
+
+        
         return 0;
 
         /*profile p; int *ptr = &p; 
