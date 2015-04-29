@@ -1,6 +1,6 @@
-# The dimensions of the CheapStat, mostly used for reference
-# for now, but it would be cool if we could generate the CAD files
-# from these declarations
+# The dimensions of the CheapStat in millimeters.
+# Mostly used for reference for now, but it would be cool
+# if we could generate the CAD files from these declarations
 
 [cheapstat]
 width     = 57.35
