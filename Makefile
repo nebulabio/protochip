@@ -1,13 +1,17 @@
+# make print-VARNAME
+print-%: ; @echo $*=$($*)
 
-out = protochip_driver
+dist_path = `pwd`/dist
 
-build: ./driver/main.c ./driver/deps/serial/serial.c
-	$(CC) -std=c99 -Wall $^ -o $(out)
+driver_dist = $(dist_path)/driver
+
+driver: ./driver/main.c ./driver/deps/serial/serial.c
+	$(CC) -std=c99 -Wall $^ -o $(driver_dist)
 
 clean:
-	rm -rf $(out)
+	rm -rf $(dist_path)
 
 money:
 	ledger -f finances.dat balance
 
-.PHONY: build clean
+.PHONY: driver clean
