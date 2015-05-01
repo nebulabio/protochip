@@ -7,17 +7,35 @@
 #include <errno.h>
 #include <unistd.h> 
 
+#include "deps/commander/commander.h"
 #include "deps/serial/serial.h"
 // refs:
 //   - http://www.cprogramming.com/tutorial/cfileio.html
 //   - http://www.codingunit.com/c-tutorial-binary-file-io <- this is really good
 
 
-#define CHEAPSTAT "/dev/ttyUSB0" // FIXME: how to scan for the correct port? How to account for Windows?
+/** 
+ * FIXME: how to scan for the correct port? How to work with windows?
+ *
+ * When I switch to cmake, I can do something like this:
+ *
+ *    #ifdef linux
+ *      // do linux stuff
+ *    #endif
+ *
+ *    #ifdef windows
+ *     // do windows stuff
+ *    #endif 
+ *
+ * In those blocks, define platform-specific vars. Also, read this article
+ * and adopt the advice: http://lucumr.pocoo.org/2013/8/18/beautiful-native-libraries/
+ * A good program to take inspiration from is mon:
+ * https://github.com/tj/mon/blob/master/src/mon.c
+ */ 
+#define CHEAPSTAT "/dev/ttyUSB0" 
 #define BAUDRATE  "B9600"        // baud is 9600, c_cflag = B9600
 
-
-typedef struct {
+typedef struct { // legacy struct from the mcu, don't change
 	char name[15];
 	uint8_t type;
 	int16_t op1;
@@ -29,8 +47,7 @@ typedef struct {
 	uint8_t curr_range;
 } profile;
 
-
-typedef struct {
+typedef struct { // legacy struct from the mcu, don't change
   char    name[15];
   int16_t freq;
   int16_t start;
@@ -40,16 +57,77 @@ typedef struct {
   uint8_t curr_range;
 } swv;
 
+// Struct for the driver state
+typedef struct {
+  const char *pidfile;
+  const char *logfile;
+  char *port;
+  int   baud;
+  int   fd;
+  int   daemon;
+  int   verbose;
+} driver_t; 
+
+// Initiate state with default values
+static driver_t driver;
+int verbose = 0;
+//driver.verbose->0;
+//driver.baud   ->9600; 
+//driver.fd     ->-1;
 
 
-int fd = -1;
+// Function signatures
+static void exithandler(driver_t *driver);
+static void print_profile(profile data, int fd);
+static void print_swv(swv data, int fd);
+static void take_ownership(char *port);
 
 
-void exithandler() { 
-  printf("Closing the connection.\n"); serialClose(fd);
+// Public api - FIXME: flesh this out
+//               also: http://lucumr.pocoo.org/2013/8/18/beautiful-native-libraries/
+void list_ports();
+void runn(const char *cmd, driver_t *driver);
+
+
+// entrypoint helpers
+static void set_verbose(command_t *self) { verbose = 1; };
+static void error(char *msg)             { fprintf(stderr, "Error: %s\n", msg); exit(1); }
+static void tbd(command_t *self)         { printf("to be developed!"); exit(1); } 
+
+// entrypoint
+int main(int argc, char **argv) {
+  command_t cli;
+  
+  command_init(&cli, argv[0], "0.0.1");
+  command_option(&cli, "-v", "--verbose", "enable verbose output", set_verbose);
+  command_option(&cli, "-l", "--list", "list all available ports", list_ports);
+  command_option(&cli, "-d", "--daemon", "run as a daemon in the background", tbd);
+  command_option(&cli, "-p", "--port", "specify the port. If not specified, tries to guess based on your platform.", tbd);
+  command_option(&cli, "-b", "--baud", "specify the baud rate, defaults to 9600", tbd);
+  command_parse(&cli, argc, argv);
+
+  printf("additional args:\n");
+  for (int i = 0; i < cli.argc; ++i) {
+    printf("  - '%s'\n", cli.argv[i]);
+  }
+
+  // command required
+  if (!cli.argc) error("<cmd> required");
+  const char *cmd = cli.argv[0];
+
+  runn(cmd, &driver);
+
+  // don't think I need this?
+  //command_free(&driver); 
+  return 0;
 }
 
-void print_profile(profile data, int fd) {
+
+// actual functionality
+
+static void exithandler(driver_t *driver) { printf("Closing the connection.\n"); serialClose(driver->fd); }
+
+static void print_profile(profile data, int fd) {
   printf("\n"); // Begin
   printf("File descriptor is %i\n", fd);
 
@@ -74,9 +152,8 @@ void print_profile(profile data, int fd) {
   printf("\n"); // End of printer
 }
 
-void print_swv(swv data, int fd) {
-  printf("\n"); // Begin
-  printf("File descriptor is %i\n", fd);
+static void print_swv(swv data, int fd) {
+  printf("\nFile descriptor is %i\n", fd);
 
   printf("  Description  \t Data\tAddress\t\tSize\n");
   printf("---------------------------------------------------\n");
@@ -98,8 +175,8 @@ void print_swv(swv data, int fd) {
 }
 
 
-void take_ownership(char *port) {
-  int  user = getuid(); // FIXME: switch to `getuid`?
+static void take_ownership(char *port) {
+  int  user = getuid();
   int group = getgid();
 
 #ifdef DEBUG
@@ -115,69 +192,61 @@ void take_ownership(char *port) {
 }
 
 
-// FIXME: I should check permissions on the port to make sure it is openable
-// use int chown(const char *path, uid_t owner, gid_t group);
-// man 2 chown
-int main(int argc, char **argv) {
-  if ((argc == 2) && (strcmp(argv[1], "-l") == 0)) {
-    char **ports = getSerialPorts();
-    char **tmp = ports;
-    printf("Available serial ports:\n");
+void list_ports() {
+  char **ports = getSerialPorts();
+  char **tmp = ports;
+  printf("Available serial ports:\n");
 
-    while (*tmp != NULL) { printf(" %s\n", *(tmp++)); }
-    free(ports);
+  while (*tmp != NULL) { printf(" %s\n", *(tmp++)); }
+  free(ports);
+}
 
-  } else if (argc == 3) {
-    char *port = argv[1];
-    int   baud = atoi(argv[2]);
+// FIXME: refactor this to dispatch on cmd
+// for inspiration: https://github.com/tj/mon/blob/master/src/mon.c#L326
+void runn(const char *cmd, driver_t *driver) {
 
-    take_ownership(port);
+#ifdef DEBUG
+  printf("running %s", cmd); // yeah, this cmd doesn't do anything, there's only one command
+#endif
 
-    fd = serialOpen(port, baud);
+  take_ownership(driver->port);
+
+  driver->fd = serialOpen(driver->port, driver->baud);
     
-    if (fd == -1) {
-      printf("Could not open %s with %d!\n", argv[1], atoi(argv[2]));
-      return 1;
-    }
-    
+  if (driver->fd == -1) {
+    printf("Could not open %s with %d!\n", driver->port, driver->baud);
+    exit(1);
+  }
 
-    atexit(exithandler);
-    printf("Connected! Datareceived will be printed...\n");
-    printf("Use CTRL+C to quit.\n");
-    
+  atexit(exithandler);
 
-    while (fd != -1) {
-      if (serialHasChar(fd)) {
+#ifdef DEBUG  
+  printf("Connected! Datareceived will be printed...\n");
+  printf("Use CTRL+C to quit.\n");
+#endif
 
-        swv d;
-        read(fd, &d, 29);
-        print_swv(d, fd);
+  while (driver->fd != -1) {
+    if (serialHasChar(driver->fd)) {
 
-        //short int type;
+      swv d;
+      read(driver->fd, &d, 29);
+      print_swv(d, driver->fd);
+
+      //short int type;
         
 
-        //printf("Getting results for: %s", type);
+      //printf("Getting results for: %s", type);
         
-               
-
-        
-        return 0;
-
-        /*profile p; int *ptr = &p; 
+      /*profile p; int *ptr = &p; 
 
         while (ptr < 29) {
 
-          if ( ptr < 16 ) { p.name = serialReadRaw(fd, ptr, 1); ptr += 14; } 
-          if ( ptr < 32 ) { p.type = serialReadRaw(fd, ptr, 8); ptr  = 29; }
+        if ( ptr < 16 ) { p.name = serialReadRaw(fd, ptr, 1); ptr += 14; } 
+        if ( ptr < 32 ) { p.type = serialReadRaw(fd, ptr, 8); ptr  = 29; }
 
-          }*/
-      }
+        }*/
     }
-  } else {
-    printf("Usage:\n");
-    printf("  %s -l        --> list available ports\n", argv[0]);
-    printf("  %s PORT BAUD --> monitor port\n", argv[0]);
   }
-
-  return 0;
 }
+
+
