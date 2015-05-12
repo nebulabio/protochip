@@ -42,5 +42,10 @@
 2015/05/05 A-M Systems
     ;2x Chlordized Wire Electrodes, Diameter 0.008 in., Length 4 in.
     Expenses:Hardware                      $  71.00
-    Expenses:Shipping                      $  12.90
+    Expenses:Shipping                      $  12.93
     Assets:bsima:Credit                    $ -83.93
+
+2015/05/06 Amazon.com
+    ;JVCC CFL-5CA Copper Foil Tape (Conductive Adhesive): 1/4 in. x 36 yds. (Copper)
+    Expenses:Hardware                      $  16.58
+    Assets:bsima:Debit                     $ -16.58
