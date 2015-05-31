@@ -24,4 +24,4 @@ clean:
 money:
 	ledger -f finances.dat balance
 
-.PHONY: driver clean dist dist_dir
+.PHONY: clean driver dist dist_dir
