@@ -6,7 +6,6 @@
 #include <errno.h>
 #include <unistd.h> 
 
-#include "deps/commander/commander.h"
 #include "deps/serial/serial.h"
 // refs:
 //   - http://www.cprogramming.com/tutorial/cfileio.html
@@ -66,15 +65,11 @@ typedef struct {
   int   verbose;
 } driver_t; 
 
-
-
 /********************************** 
   initialize state
 **********************************/
 
 static driver_t driver;
-
-
 
 /********************************** 
   helper functions 
@@ -179,92 +174,79 @@ void list(driver_t *driver) {
 }
 
 
+//@@ add ability to run as background thread.
+void daemonize(void)
+{}
 
-/********************************** 
-  cli settings
-**********************************/
-
-
-/*
- * -i, --pidfile <path>
- */
-static void set_pidfile(command_t *self) {
-  driver_t *driver = (driver_t *) self->data;
-  driver->pidfile = self->arg;
+// Prints correct usage.
+int usage(void)
+{
+  fprintf(stderr, "-i --pidfile <path>  specify the pidfile location\n");
+  fprintf(stderr, "-g --logfile <path>  specify the logfile location\n");
+  fprintf(stderr, "-b --baud <num>      specify the baud rate, defaults to 9600\n");
+  fprintf(stderr, "-p --port <path>     specify the port. If empty, tries to guess based on your platform\n");
+  fprintf(stderr, "-v --verbose         enable verbose output\n");
+  fprintf(stderr, "-d --daemon          run as a daemon in the background\n");
+  return 0;
 }
-
-/*
- * -g, --logfile <path>
- */
-static void set_logfile(command_t *self) {
-  driver_t *driver = (driver_t *) self->data;
-  driver->logfile = self->arg;
-}
-
-/*
- * -b, --baud <num>
- */
-static void set_baud(command_t *self) {
-  driver_t *driver = (driver_t *) self->data;
-  driver->baud = atoi(self->arg);
-}
-
-/*
- * -p, --port <path>
- */
-static void set_port(command_t *self) {
-  driver_t *driver = (driver_t *) self->data;
-  driver->port = self->arg;
-}
-
-/*
- * -v, --verbose
- */
-static void set_verbose(command_t *self) {
-  driver_t *driver = (driver_t *) self->data;
-  driver->verbose = 1;
-}
-
-/*
- * -d, --daemon
- */
-static void set_daemon(command_t *self) {
-  driver_t *driver = (driver_t *) self->data;
-  driver->daemon = 1;
-}
-
 
 // entrypoint
 int main(int argc, char **argv) {
-  command_t cli;
+  int c = 0, d = 0;
 
+  // default states.
   driver.pidfile = ""; //FIXME
   driver.logfile = ""; //FIXME
-  driver.port    = "/dev/ttyUSB0"; //FIXME
+  driver.port    = "/dev/USB0";
   driver.baud    = 9600;
   driver.fd      = -1;
   driver.daemon  = 0;
   driver.verbose = 0;
-  
 
-  command_init(&cli, argv[0], "0.0.1");
-  command_option(&cli, "-i", "--pidfile <path>", "specify the pidfile location", set_pidfile); // FIXME: remove this?
-  command_option(&cli, "-g", "--logfile <path>", "specify the logfile location", set_logfile);
-  command_option(&cli, "-b", "--baud <num>", "specify the baud rate, defaults to 9600", set_baud);
-  command_option(&cli, "-p", "--port <path>", "specify the port. If empty, tries to guess based on your platform", set_port);
-  command_option(&cli, "-v", "--verbose", "enable verbose output", set_verbose);
-  command_option(&cli, "-d", "--daemon", "run as a daemon in the background", set_daemon);
 
- 
-  command_parse(&cli, argc, argv);
 
-  if (!cli.argc) error("<cmd> required");
+  printf("CheapStat Driver v0.0.2\n");
 
-  if (strcmp(cli.argv[0], "start") == 0) { start(&driver); } 
-  if (strcmp(cli.argv[0], "list") == 0)  { list(&driver);  }
+  // parse command line arguments.
+  while((c = getopt(argc, argv, "i:g:b:p:vd")) != EOF)
+  {
+    switch(c)
+    {
+      case 'b':
+        driver.baud = atoi(optarg);
+        break;
+      case 'p':
+        driver.port = optarg;
+        break;
+      case 'i':
+        driver.pidfile = optarg;
+        break;
+      case 'g':
+        driver.logfile = optarg;
+        break;
+      case 'd':
+        d = 1;
+        break;
+      case 'v':
+        driver.verbose = 1;
+        printf("verbose\n");
+        break;
+      default:
+        fprintf(stderr, "unknown arg %c\n", optopt);
+        return usage();
+        break;
+    }
+  }
 
-  command_free(&cli);
+  printf("port = %s\n", driver.port);
+  printf("baud rate = %i\n", driver.baud);
 
+
+  if (d == 1)
+    daemonize();
+
+
+  printf("exit\n");
   return 0;
 }
 
