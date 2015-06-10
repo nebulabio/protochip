@@ -4,13 +4,16 @@
 #include <stdint.h>
 
 #include <errno.h>
+
 #include <unistd.h> 
+#include <termios.h>
 
 #include "deps/serial/serial.h"
+
+#include "cheapstat-types.h"
 // refs:
 //   - http://www.cprogramming.com/tutorial/cfileio.html
 //   - http://www.codingunit.com/c-tutorial-binary-file-io <- this is really good
-
 
 /** 
  * FIXME: how to scan for the correct port? How to work with windows?
@@ -31,27 +34,90 @@
  * https://github.com/tj/mon/blob/master/src/mon.c
  */ 
 
-typedef struct { // legacy struct from the mcu, don't change
-	char name[15];
-	uint8_t type;
-	int16_t op1;
-	int16_t op2;
-	int16_t op3;
-	int16_t op4;
-	int16_t op5;
-	int16_t op6;
-	uint8_t curr_range;
-} profile;
 
-typedef struct { // legacy struct from the mcu, don't change
-  char    name[15];
-  int16_t freq;
-  int16_t start;
-  int16_t stop;
-  int16_t height;
-  int16_t increment;
-  uint8_t curr_range;
-} swv;
+
+// SWV 0
+// CV 1
+// ACV 2
+// LSV 3
+// CONSTVOLT 4
+// CA 5
+
+// SWV test //// total length = 29 + i * 4 bytes
+// u8 SWV ID (0)
+// u8*16 name
+// u16 freq
+// u16 start
+// u16 stop
+// u16 height
+// u16 increment
+// u8 curr_range
+// u16 i (number of measurements)
+// - u16 forwardCurrent * i
+// - u16 reverseCurrent * i
+// u8 SWV ID (0)
+
+// CV test //// total length = 27 + i * 2 bytes
+// u8 CV ID (1)
+// u8*16 name
+// u16 slope
+// u16 start
+// u16 stop
+// u16 scans
+// u16 sample_rate
+// u8 curr_range
+// u16 i (number of measurements)
+// - u16 current * i
+// u8 CV ID (1)
+
+// ACV test //// total length = 33 + k * 4 bytes
+// u8 ACV ID (2)
+// u8*16 name
+// u16 freq
+// u16 height
+// u16 cycles
+// u16 start
+// u16 stop
+// u16 increment
+// u8 curr_rante 
+// u16 k (number of samples)
+// - u16 magnitude * k
+// - u16 phase * k
+// u8 ACV ID (2)
+
+// LSV test //// total length = 29 + i * 2 bytes
+// u8 LSV ID (3)
+// u8*16 name
+// u16 settle
+// u16 start
+// u16 slope
+// u16 sample_rate
+// u8 curr_rage
+// u16 i (number of samples)
+// - u16 current * i
+// u8 LSV ID (3)
+
+// CONSTVOLT test -- no output
+
+// CA test //// total length = 30 + i * 2 bytes
+// u8 CA ID (5)
+// u8*16 name
+// u16 wait_time
+// u16 step_voltage
+// u16 step_width
+// u16 quiet_time
+// u16 sample_rate
+// u8 steps
+// u8 curr_range
+// u16 length (number of samples)
+// - u16 results * length
+// u8 CA ID (5)
+
+typedef struct CheapStatProfile{ // legacy struct from the mcu, don't change
+	char name[15];
+} Profile;
+
+// All the different types of readings you can have //
 
 
 // Struct for the driver state
@@ -71,11 +137,50 @@ typedef struct {
 
 static driver_t driver;
 
+union uSWV
+{
+   SWV      swv;
+   uint8_t  rawbytes[29 + kSize_MaxSamplesSWV * 4];
+};
+
+union uSWV gSVWInput;
+
+struct CV   gCVInput;
+struct ACV  gACVInput;
+struct LSV  gLSVInput;
+struct CA   gCAInput;
+
 /********************************** 
   helper functions 
 **********************************/
 
-static void exithandler()    { printf("Closing the connection.\n"); serialClose(driver.fd); }
+// enables and disables canonical mode for terminal input.
+void ttyCanonicalMode(int state)
+{
+  struct termios ttystate;
+
+  tcgetattr(STDIN_FILENO, &ttystate);
+
+  switch(state)
+  {
+    case 1:
+      ttystate.c_lflag &= ~ICANON;
+      ttystate.c_cc[VMIN] = 1;
+      break;
+    default:
+      ttystate.c_lflag |= ICANON;
+      break;
+  }
+
+  tcsetattr(STDIN_FILENO, TCSANOW, &ttystate);
+}
+
+static void exithandler()
+{ 
+  printf("Closing the connection.\n"); 
+  serialClose(driver.fd); 
+  ttyCanonicalMode(0);
+}
 static void error(char *msg) { fprintf(stderr, "Error: %s\n", msg); exit(1); }
 
 static void take_ownership(const char *port) {
@@ -90,12 +195,22 @@ static void take_ownership(const char *port) {
 
   // int chown(const char *path, uid_t owner, gid_t group);
   if (chown(port, user, group) == -1) { 
-    printf("Error (can't `chown`): %s\n", strerror(errno)); 
+    printf("Error (can't `chown`): %s\n Please run as admin\n", strerror(errno)); 
     exit(EXIT_FAILURE); 
   }
 }
 
-
+int userInputAvailable(void)  
+{
+  struct timeval tv;
+  fd_set fds;
+  tv.tv_sec = 0;
+  tv.tv_usec = 0;
+  FD_ZERO(&fds);
+  FD_SET(STDIN_FILENO, &fds);
+  return select(STDIN_FILENO+1, &fds, NULL, NULL, &tv);
+  //return (FD_ISSET(STDIN_FILENO, &fds));
+}
 
 /********************************** 
   stateful functions 
@@ -104,17 +219,184 @@ static void take_ownership(const char *port) {
   `driver_t driver` struct.
 **********************************/
 
-void cheapstat_reader(driver_t *driver) {
-  while (driver->fd != -1) {
-    if (serialHasChar(driver->fd)) {
-      uint8_t b;
-      read(driver->fd, &b, 1);
-      printf("%02x", b);
-    }
+uint16_t swapEndianLong(uint16_t l)
+{
+  return(((l & 0xFF) << 8) | (l >> 8));
+}
+
+void printSWV(SWV *swv)
+{
+  printf("SWV Reading\n");
+  printf("freq:       %3d  0x%04x\n", swv->freq, swv->freq);
+  printf("start:      %3d  0x%04x\n", swv->start, swv->start);
+  printf("stop:       %4d  0x%04x\n", swv->stop, swv->stop);
+  printf("height:     %4d  0x%04x\n", swv->height, swv->height);
+  printf("increment:  %4d  0x%04x\n", swv->increment, swv->increment);
+  printf("currRange:  %d  0x%04x\n", swv->currRange, swv->currRange);
+  printf("numSamples: %d  0x%04x\n", swv->numSamples, swv->numSamples);
+
+  for(uint16_t i = 0; i < swv->numSamples; i++)
+  {
+    printf("fc sample %i = %i\n", i, swv->forwardCurrentSamples[i]);
+    printf("rc sample %i = %i\n", i, swv->reverseCurrentSamples[i]);
   }
 }
 
-// FIXME: write a daemonize function
+// parser function pointer 
+int (*parse)(uint8_t);
+
+uint16_t pSWVIndex = 0;
+
+int parseSWV(uint8_t b)
+{
+  while(pSWVIndex < 13)
+  {
+    gSVWInput.rawbytes[pSWVIndex++] = b;
+    return(0);
+  }
+
+  if(pSWVIndex == 13)
+  {
+    printf("Raw bytes:\n");
+    for(uint8_t i = 0; i < 13; i++)
+      printf("0x%02x ", gSVWInput.rawbytes[i]);
+
+    printf("\n");
+
+    // atmel = big endian - Intel = little endian
+    gSVWInput.swv.freq        = swapEndianLong(gSVWInput.swv.freq);
+    gSVWInput.swv.start       = swapEndianLong(gSVWInput.swv.start);
+    gSVWInput.swv.stop        = swapEndianLong(gSVWInput.swv.stop);
+    gSVWInput.swv.height      = swapEndianLong(gSVWInput.swv.height);
+    gSVWInput.swv.increment   = swapEndianLong(gSVWInput.swv.increment);
+    gSVWInput.swv.numSamples  = swapEndianLong(gSVWInput.swv.numSamples);
+
+    printSWV(&gSVWInput.swv);
+  }
+
+  while((pSWVIndex - 13) < (gSVWInput.swv.numSamples * 2) - 1)
+  {
+    gSVWInput.rawbytes[pSWVIndex++] = b;
+    return(0);
+  }
+
+  gSVWInput.rawbytes[pSWVIndex++] = b;
+  
+  return(1);
+}
+
+uint8_t   gParseState = 0;
+
+uint8_t   gNameIndex = 0;
+uint8_t   gName[15] = {0x00};
+
+// Parse CheapStat 
+void    CSParse(uint8_t b)
+{
+  switch(gParseState)
+  {
+    case 0: // State one choses the parser function based on reading type.
+    {
+      switch(b)
+      {
+        case 0:
+        {
+          printf("Recieving SWV\n");
+          // set function pointer ot SWV function.
+          pSWVIndex = 0;
+          parse = parseSWV;
+          gParseState++;
+          break;
+        }
+//        case 1:
+//          printf("Recieving CV\n");
+//          break;
+//        case 2:
+//          printf("Recieving ACV\n");
+//          break;
+//        case 3:
+//          printf("Recieving LSV\n");
+//          break;
+//        case 4:
+//          printf("Recieving CONSTVOLT\n");
+//          break;
+//        case 5:
+//          printf("Recieving CA\n");
+//          break;
+//        case 'z':
+//          printf("Recieving Profiles\n");
+//          break;
+        default:
+          printf("Unrecognized Type: %c\n", b);
+          break;
+      }
+      break;
+    }
+    case 1: // reads in name.
+    {
+      gName[gNameIndex++] = b;
+      if(gNameIndex == 15)
+      {
+        printf("Name: ");
+        for(int i = 0; i < gNameIndex; i++)
+          printf("%c", gName[i]);
+
+        printf("\n");
+        gParseState++; // increment state
+        gNameIndex = 0; // reset state variable
+      }
+      break;
+    }
+    case 2: // Passes all data until function returns 0
+    {
+      if(parse(b))
+        gParseState++;
+
+      break;
+    }
+    case 3: // Waits for closing character based on reading type. Clears state back to 0.
+      gParseState = 0;
+      printf("Finished parsing type %i", b);
+      break;
+    default:
+      // driver crash.
+      gParseState = 0;
+      break;
+  }
+}
+
+// loop checks for input on terminal and serial port & passes data to parsers.
+void cheapstat_reader(driver_t *driver) 
+{
+  int8_t c;
+
+  // remove terminal canonical mode for parsing ease.
+  ttyCanonicalMode(1);
+
+  // loops until ^C
+  while (driver->fd != -1) 
+  {
+    c = 0;
+    if(serialHasChar(driver->fd))
+    {
+      while(serialHasChar(driver->fd))
+      {
+        uint8_t b;
+        read(driver->fd, &b, 1);
+        CSParse(b);
+      }
+    }
+
+      while(userInputAvailable())
+      {
+        c = fgetc(stdin);
+        if(c != '\r' && c!= '\n')
+          write(driver->fd, &c, 1);
+      }
+  }
+}
+
+//@@ FIXME: write a daemonize function
 //static void daemonize() {}
 
 /********************************** 
@@ -151,7 +433,7 @@ static void start(driver_t *driver) {
   atexit(exithandler);
 
 
-#ifdef DEBUG  
+#ifdef DEBUG
   printf("Connected! Datareceived will be printed...\n");
   printf("Use CTRL+C to quit.\n");
 #endif
@@ -229,7 +511,6 @@ int main(int argc, char **argv) {
         break;
       case 'v':
         driver.verbose = 1;
-        printf("verbose\n");
         break;
       default:
         fprintf(stderr, "unknown arg %c\n", optopt);
@@ -241,12 +522,12 @@ int main(int argc, char **argv) {
   printf("port = %s\n", driver.port);
   printf("baud rate = %i\n", driver.baud);
 
-
   if (d == 1)
     daemonize();
 
+  start(&driver);
 
-  printf("exit\n");
+  ttyCanonicalMode(0);
   return 0;
 }
 
