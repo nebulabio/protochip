@@ -2,8 +2,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
-
 #include <errno.h>
+
+#include <getopt.h>
+#include <sys/time.h>
 
 #include <unistd.h> 
 #include <termios.h>
