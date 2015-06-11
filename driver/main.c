@@ -272,8 +272,6 @@ int parseSWV(uint8_t b)
     gSVWInput.swv.height      = swapEndianLong(gSVWInput.swv.height);
     gSVWInput.swv.increment   = swapEndianLong(gSVWInput.swv.increment);
     gSVWInput.swv.numSamples  = swapEndianLong(gSVWInput.swv.numSamples);
-
-    printSWV(&gSVWInput.swv);
   }
 
   while((pSWVIndex - 13) < (gSVWInput.swv.numSamples * 2) - 1)
@@ -284,6 +282,7 @@ int parseSWV(uint8_t b)
 
   gSVWInput.rawbytes[pSWVIndex++] = b;
   
+  printSWV(&gSVWInput.swv);
   return(1);
 }
 
