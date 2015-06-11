@@ -7,4 +7,4 @@ piece is shorter that the bottom piece in width which leaves room to use copper 
 bottom piece of acrylic. This serves a double function of protecting the fragile electrodes from pulling forces that
 may break them and also to provide solid contact to the cheapstat through the ProtoAttachment system.
 
-The protochip consists of 7 parts. The entire assembly can be seem in Protochip_Assemble.stl. 
+The protochip consists of 7 parts. The entire assembly can be seen in Protochip_Assemble.stl. 
