@@ -51,6 +51,11 @@
     Assets:bsima:Debit                     $ -16.58
 
 2015/06/21 eBay.com
-    ; Nunc-Immuno MicroWell 96 WellPlates w/ MaxiSorp Surface Qty 20
-    Expenses:Hardware                      $  24.95
+    ;Nunc-Immuno MicroWell 96 WellPlates w/ MaxiSorp Surface Qty 20
+    Expenses:Wetware                       $  24.95
     Assets:bsima:Debit                     $ -24.95
+
+2015/06/22 Amazon.com
+    ;MetriCide® 28 High-Level Disinfectant / Sterilant (1 gallon bottle) Sold by: Prime Medical Store
+    Expenses:Wetware                       $  29.99
+    Assets:bsima:Debit                     $ -29.99
