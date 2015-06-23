@@ -240,7 +240,7 @@ uint16_t pSWVIndex = 0;
 int parseSWV(uint8_t b)
 {
   gRawBytes[pSWVIndex++] = b;
-  printf("%d %02x\n", (pSWVIndex-1), gRawBytes[pSWVIndex-1]);
+  //printf("%d %02x\n", (pSWVIndex-1), gRawBytes[pSWVIndex-1]);
 
   if(pSWVIndex < 13)
     return(0);
@@ -275,7 +275,7 @@ int parseSWV(uint8_t b)
     gSVWInput.reverseCurrentSamples[index / 4] |= gRawBytes[pSWVIndex-1] << (8 * (1 - index % 2));
 
 
-  printf("shift - %04x\n", gRawBytes[pSWVIndex-1] << (8 * (index % 2)));
+  //printf("shift - %04x\n", gRawBytes[pSWVIndex-1] << (8 * (index % 2)));
     
   if((index % 4) == 3)
     printf("%d) reverse: %d  forward: %d\n", index / 4
