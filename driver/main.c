@@ -139,18 +139,14 @@ typedef struct {
 
 static driver_t driver;
 
-union uSWV
-{
-   SWV      swv;
-   uint8_t  rawbytes[29 + kSize_MaxSamplesSWV * 4];
-};
+// All raw input is read into this buffer. It is sized to fit the maximum possible transfer.
+uint8_t  gRawBytes[15 + kSize_MaxSamplesLSV * 2];
 
-union uSWV gSVWInput;
-
-struct CV   gCVInput;
-struct ACV  gACVInput;
-struct LSV  gLSVInput;
-struct CA   gCAInput;
+SWV  gSVWInput;
+CV   gCVInput;
+ACV  gACVInput;
+LSV  gLSVInput;
+CA   gCAInput;
 
 /********************************** 
   helper functions 
@@ -229,19 +225,13 @@ uint16_t swapEndianLong(uint16_t l)
 void printSWV(SWV *swv)
 {
   printf("SWV Reading\n");
-  printf("freq:       %3d  0x%04x\n", swv->freq, swv->freq);
-  printf("start:      %3d  0x%04x\n", swv->start, swv->start);
-  printf("stop:       %4d  0x%04x\n", swv->stop, swv->stop);
-  printf("height:     %4d  0x%04x\n", swv->height, swv->height);
-  printf("increment:  %4d  0x%04x\n", swv->increment, swv->increment);
-  printf("currRange:  %d  0x%04x\n", swv->currRange, swv->currRange);
+  printf("freq: %3d  0x%04x\n", swv->freq, swv->freq);
+  printf("start: %3d  0x%04x\n", swv->start, swv->start);
+  printf("stop: %4d  0x%04x\n", swv->stop, swv->stop);
+  printf("height: %4d  0x%04x\n", swv->height, swv->height);
+  printf("increment: %4d  0x%04x\n", swv->increment, swv->increment);
+  printf("currRange: %d  0x%02x\n", swv->currRange, swv->currRange);
   printf("numSamples: %d  0x%04x\n", swv->numSamples, swv->numSamples);
-
-  for(uint16_t i = 0; i < swv->numSamples; i++)
-  {
-    printf("fc sample %i = %i\n", i, swv->forwardCurrentSamples[i]);
-    printf("rc sample %i = %i\n", i, swv->reverseCurrentSamples[i]);
-  }
 }
 
 // parser function pointer 
@@ -251,39 +241,53 @@ uint16_t pSWVIndex = 0;
 
 int parseSWV(uint8_t b)
 {
-  while(pSWVIndex < 13)
-  {
-    gSVWInput.rawbytes[pSWVIndex++] = b;
+  gRawBytes[pSWVIndex++] = b;
+  printf("%d %02x\n", (pSWVIndex-1), gRawBytes[pSWVIndex-1]);
+
+  if(pSWVIndex < 13)
     return(0);
-  }
 
   if(pSWVIndex == 13)
   {
     printf("Raw bytes:\n");
     for(uint8_t i = 0; i < 13; i++)
-      printf("0x%02x ", gSVWInput.rawbytes[i]);
+      printf("0x%02x ", gRawBytes[i]);
 
     printf("\n");
 
     // atmel = big endian - Intel = little endian
-    gSVWInput.swv.freq        = swapEndianLong(gSVWInput.swv.freq);
-    gSVWInput.swv.start       = swapEndianLong(gSVWInput.swv.start);
-    gSVWInput.swv.stop        = swapEndianLong(gSVWInput.swv.stop);
-    gSVWInput.swv.height      = swapEndianLong(gSVWInput.swv.height);
-    gSVWInput.swv.increment   = swapEndianLong(gSVWInput.swv.increment);
-    gSVWInput.swv.numSamples  = swapEndianLong(gSVWInput.swv.numSamples);
-  }
+    gSVWInput.freq        = gRawBytes[0] << 8 | gRawBytes[1];
+    gSVWInput.start       = gRawBytes[2] << 8 | gRawBytes[3];
+    gSVWInput.stop        = gRawBytes[4] << 8 | gRawBytes[5];
+    gSVWInput.height      = gRawBytes[6] << 8 | gRawBytes[7];
+    gSVWInput.increment   = gRawBytes[8] << 8 | gRawBytes[9];
+    gSVWInput.currRange   = gRawBytes[10];
+    gSVWInput.numSamples  = gRawBytes[11] << 8 | gRawBytes[12];
+    printSWV(&gSVWInput);
 
-  while((pSWVIndex - 13) < (gSVWInput.swv.numSamples * 2) - 1)
-  {
-    gSVWInput.rawbytes[pSWVIndex++] = b;
     return(0);
   }
 
-  gSVWInput.rawbytes[pSWVIndex++] = b;
+  // pSWVIndex should always be greater than 14
+  uint16_t index = pSWVIndex - 14;
   
-  printSWV(&gSVWInput.swv);
-  return(1);
+  if((index % 4) < 2)
+    gSVWInput.forwardCurrentSamples[index / 4] |= gRawBytes[pSWVIndex-1] << (8 * (1 - index % 2));
+  else
+    gSVWInput.reverseCurrentSamples[index / 4] |= gRawBytes[pSWVIndex-1] << (8 * (1 - index % 2));
+
+
+  printf("shift - %04x\n", gRawBytes[pSWVIndex-1] << (8 * (index % 2)));
+    
+  if((index % 4) == 3)
+    printf("%d) reverse: %d  forward: %d\n", index / 4
+          , gSVWInput.reverseCurrentSamples[index / 4], gSVWInput.forwardCurrentSamples[index / 4]);
+    
+  
+  if((index) == (gSVWInput.numSamples * 4) - 1)
+    return(1);
+  else
+    return(0);
 }
 
 uint8_t   gParseState = 0;
@@ -357,7 +361,7 @@ void    CSParse(uint8_t b)
     }
     case 3: // Waits for closing character based on reading type. Clears state back to 0.
       gParseState = 0;
-      printf("Finished parsing type %i", b);
+      printf("Finished parsing type %i\n", b);
       break;
     default:
       // driver crash.

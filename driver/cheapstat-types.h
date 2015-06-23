@@ -30,8 +30,8 @@ typedef struct SWV
   int16_t   increment;
   uint8_t   currRange;
   uint16_t  numSamples;
-  int16_t  forwardCurrentSamples[kSize_MaxSamplesSWV/2];
-  int16_t  reverseCurrentSamples[kSize_MaxSamplesSWV/2];
+  int16_t   forwardCurrentSamples[kSize_MaxSamplesSWV/2];
+  int16_t   reverseCurrentSamples[kSize_MaxSamplesSWV/2];
 }SWV; // length = 13 // length = 31 + i * 4 bytes
 
 //@@ Review types of variables below. Not all are unsigned.
