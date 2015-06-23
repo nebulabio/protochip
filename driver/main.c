@@ -189,8 +189,6 @@ static void take_ownership(const char *port) {
   printf("\nUID:\t%d\nGID:\t%d\n\n", user, group);
 #endif
 
-  printf("Port is: %s\n\n", port);
-
   // int chown(const char *path, uid_t owner, gid_t group);
   if (chown(port, user, group) == -1) { 
     printf("Error (can't `chown`): %s\n Please run as admin\n", strerror(errno)); 

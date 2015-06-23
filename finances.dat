@@ -49,3 +49,19 @@
     ;JVCC CFL-5CA Copper Foil Tape (Conductive Adhesive): 1/4 in. x 36 yds. (Copper)
     Expenses:Hardware                      $  16.58
     Assets:bsima:Debit                     $ -16.58
+
+2015/06/21 eBay.com
+    ;Nunc-Immuno MicroWell 96 WellPlates w/ MaxiSorp Surface Qty 20
+    Expenses:Wetware                       $  24.95
+    Assets:bsima:Debit                     $ -24.95
+
+2015/06/22 Amazon.com
+    ;MetriCide® 28 High-Level Disinfectant / Sterilant (1 gallon bottle) Sold by: Prime Medical Store
+    Expenses:Wetware                       $  29.99
+    Assets:bsima:Debit                     $ -29.99
+
+2015/06/22 Jackson ImmunoResearch Laboratories, Inc
+    ;Rhodamine Red™-X (RRX) AffiniPure Rabbit Anti-Mouse IgG (H+L)
+    Expenses:Wetware                       $  75.00
+    Expenses:Shipping                      $   9.00
+    Assets:bsima:Debit                     $ -84.00
