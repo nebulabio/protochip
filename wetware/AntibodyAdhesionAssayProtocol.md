@@ -1,4 +1,4 @@
-﻿ #Antibody Adhesion Assay Protocol
+﻿#Antibody Adhesion Assay Protocol
 
 
 The purpose of this assay is to determine the level of adhesion of antibody on untreated 96-well plates, treated 96 well plates, and PMMA. 
@@ -50,11 +50,12 @@ The purpose of this assay is to determine the level of adhesion of antibody on u
 8. Image at fluorescent microscope
 
 
-Test Setup
+###Well Plate Setup
 
-| Col 1         |   Col 2       | Col 3              | Col 4 |
-| --- | --- | --- | 
-| Blank        | X[PEI+GLUT] | X[PEI+GLUT] | X[PEI+GLUT] |
-| Blank        | X[Primary]     | X[Primary] | X[Primary] |
-| Blank       | X[Secondary]  | X[Secondary] | X[Secondary] |
-| Blank        |  ALL     |  ALL | ALL |
+
+Col 1 | Col 2 | Col 3 | Col 4
+----- | ----- | ----- | -----
+Blank | X[PEI + Glut] | X[PEI + Glut] | X[Pei + Glut]
+Blank | X[Primary] | X[Primary] | X[Primary]
+Blank | X[Secondeary] | X[Secondeary] | X[Secondeary]
+Blank | ALL | ALL | ALL
