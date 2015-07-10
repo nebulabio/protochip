@@ -2,7 +2,7 @@
 
 ;;FIXME: add Andres' purchases from earlier here
 
-2015/04/17 Polysciences, Inc. 
+2015/04/17 Polysciences, Inc.
     ;Polyethyleneimine, branched (50% soln. in water, MW 750,000)
     Expenses:Wetware                       $ 189.00
     Expenses:Shipping                      $  18.15
@@ -65,3 +65,11 @@
     Expenses:Wetware                       $  75.00
     Expenses:Shipping                      $   9.00
     Assets:bsima:Debit                     $ -84.00
+
+2015/07/02 R&D Systems (via Cheryl Zielinski)
+    ;Cortisol Parameter Assay Kit
+    Expenses:Wetware                       $ 289.00
+    ;Hydrocortison
+    Expenses:Wetware                       $  45.00
+    Expenses:Shipping                      $  35.00
+    Assets:bsima:Credit                    $-369.00
