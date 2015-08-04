@@ -1,9 +1,13 @@
-## Results for Stock Cortisol Characterization Test
-The measured results are in terms of **Optical Density**(O.D. Wavelength~nm).
-Calculated results are **Corrected Optical Density** (Result - Correction - NSB), ** Average Corrected Optical Desnity** (Duplicates Averaged), **Linear Curve Fit**, and **Percent Error**.
+# Results for Stock Cortisol Characterization Test
+## Document Info
+ - Data is measured in terms of **Optical Density**(O.D. Wavelength~nm).
+
+ - Calculations to get the main result are **Corrected Optical Density** (Result - Correction - NSB), ** Average Corrected Optical Desnity** (Duplicates Averaged), and **Linear Regression**
+
+ - The main reuslts are **Calculated Sample Concentration** and **Percent Error**.
 
 #####Test Setup
-| Standard | Sample |
+| Standard Concentration | Hypothesized Sample Concentration |
 | ----------------- | ----------------- |
 |10 ng/mL|10 ng/mL|
 |5 ng/mL|10 ng/mL|
@@ -14,7 +18,7 @@ Calculated results are **Corrected Optical Density** (Result - Correction - NSB)
 |0.156 ng/mL|NSB|
 | Zero |NSB|
 
-## Optical Density
+## Optical Density (Collected Data)
 | Standard Result(O.D. 450nm)| Sample Result(O.D. 450nm) |
 | ----------------- | ----------------- |
 |0.113|0.096|
@@ -51,7 +55,7 @@ Calculated results are **Corrected Optical Density** (Result - Correction - NSB)
 
 ## Average and Reformatted Corrected Data
 ###### Setup
-| Standard | Sample |
+| Standard Concentration | Sample Concentration |
 | ----------------- | ----------------- |
 |10 ng/mL|10 ng/mL|
 |5 ng/mL|0.625 ng/mL|
@@ -62,7 +66,7 @@ Calculated results are **Corrected Optical Density** (Result - Correction - NSB)
 |0.156 ng/mL|
 | Zero ||
 ###### Data
-| Corrected Standard | Corrected Average Sample |
+| Corrected Standard O.D. | Corrected Average Sample O.D. |
 | ----------------- | ----------------- |
 |0.062|	0.04375
 |0.112|	0.354
@@ -73,6 +77,44 @@ Calculated results are **Corrected Optical Density** (Result - Correction - NSB)
 |0.606|
 |0.679|
 
-###### Linear Regression
-The corrected standard was 
+## Logarithmic Regression
+A logarithmic regression was performed using a python script called [Linear_Regression.py](github.com) where:
+
+> x values = Log_base_10(Standard Concentration) = Log[10ng/ml 5ng/mL 2.5ng/mL 1.25ng/mL 1.25ng/mL 0.625ng/mL 0.313ng/mL 0.156ng/mL]
+
+> y values = Corrected Standard Optical Density = [0.062 0.112 0.194 0.314 0.4 0.504 0.606 0.679]
+
+The result equation of the line is **Y = -0.135ln(x) + 0.3435** with an **R Squared Value of 0.9922**.
+
+## Calculated Sample Concentration
+The Corrected Average Sample O.D. values [0.04375 354 5385] were plugged in to the Linear regression Equation shown above using a python script called [Sample_Concetration_Calculation.py](github.com)
+
+| Calculated Sample Concentration(ng/mL)|
+|--------------|
+|9.2107|
+|0.9252|
+|0.2359|
+
+##Error
+Absolute Error and Precent Error were calculated by [Error.py](github.com)
+
+> Absolute Error = |(Calculated Sample Concentration - Hypythesized Sample Concentration)|
+
+|Absolute Error|
+|--------------|
+|0.9230|
+|0.3020|
+|0.0827|
+
+> Percent Error = |(Calculated Sample Concentration - Hypythesized Sample Concentration)| / Calculated Sample Concentration * 100
+
+|Percent Error|
+|--------------|
+|0.1017|
+|0.3258|
+|0.3464|
+
+## Conclusion
+The concentration of Stock Cortisol Solution is approximately **50 mg/mL** the error should be **plus or minus 1 ng/mL**.
+
 
