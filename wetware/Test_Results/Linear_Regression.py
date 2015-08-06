@@ -18,6 +18,13 @@ concentrations = np.array([10.0, 5.0, 2.5, 1.25, 0.625, 0.313, 0.156])
 log_concentrations = np.log10(concentrations)
 
 
+def f(x, a, b, c):
+    return a * np.exp(-b * x) + c
+
+
+popt, pcov = optimize.curve_fit(f, optical_densities, concentrations)
+
+
 ## Linear Regression
 slope, intercept, r_value, p_value, std_err = stats.linregress(log_concentrations, optical_densities)
 
@@ -27,9 +34,11 @@ def plot_results():
     # First add original data
     plt.plot(optical_densities, concentrations, 'ro', label="Original Data")
     plt.plot(log_concentrations, 'ko', label="log of concentrations")
+    # Second add the fitted line
+    plt.plot(optical_densities, f(optical_densities, *popt), 'r-', label="Fitted curve")
     plt.legend()
     plt.show()
-
+    
 
 def print_results(slope, intercept, r_value):
     print("Slope:\t\t{}".format(slope))
