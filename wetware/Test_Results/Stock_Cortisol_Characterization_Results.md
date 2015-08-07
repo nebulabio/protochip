@@ -3,7 +3,7 @@
 ## Document Info
 
  - Data is measured in terms of **Optical Density** (O.D. Wavelength~nm).
- - Calculations to get the main result are **Corrected Optical Density** (Result - Correction - NSB), **Average Corrected Optical Desnity** (Duplicates Averaged), and **Linear Regression**
+ - Calculations to get the main result are **Corrected Optical Density** (Result - Correction - NSB), **Average Corrected Optical Desnity** (Duplicates Averaged), and **Logarithmic Regression**
  - The main reuslts are **Calculated Sample Concentration** and **Percent Error**.
 
 ## Test Setup
@@ -85,7 +85,7 @@
 
 ## Logarithmic Regression
 
-A logarithmic regression was performed using a python script called [Linear_Regression.py](github.com) where:
+A logarithmic regression was performed using a python script called [Logarithmic_Regression.py](./Logarithmic_Regression.py) where:
 
     x values = Log_base_10(Standard Concentration) = Log[10ng/ml 5ng/mL 2.5ng/mL 1.25ng/mL 1.25ng/mL 0.625ng/mL 0.313ng/mL 0.156ng/mL]
     y values = Corrected Standard Optical Density = [0.062 0.112 0.194 0.314 0.4 0.504 0.606 0.679]
@@ -94,7 +94,7 @@ The result equation of the line is **Y = -0.135ln(x) + 0.3435** with an **R Squa
 
 ## Calculated Sample Concentration
 
-The Corrected Average Sample O.D. values [0.04375 354 5385] were plugged in to the Linear regression Equation shown above using a python script called [Sample_Concetration_Calculation.py](github.com)
+The Corrected Average Sample O.D. values [0.04375 354 5385] were plugged in to the Logarithmic regression Equation shown above using a python script called [Sample_Concetration_Calculation.py](./Sample_Concentration_Calculation.py)
 
 | Calculated Sample Concentration (ng/mL) |
 | --------------------------------------- |
@@ -104,7 +104,7 @@ The Corrected Average Sample O.D. values [0.04375 354 5385] were plugged in to t
 
 ## Error
 
-Absolute Error and Precent Error were calculated by [Error.py](github.com)
+Absolute Error and Precent Error were calculated by [Error.py](./Error.py)
 
     Absolute Error = |(Calculated Sample Concentration - Hypythesized Sample Concentration)|
 

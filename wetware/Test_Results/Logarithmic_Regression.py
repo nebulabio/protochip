@@ -19,6 +19,7 @@ log_concentrations = np.log10(concentrations)
 
 
 def f(x, a, b, c):
+    "Function to be fitted to the data with scipize.optimize.curve_fit()"
     return a * np.exp(-b * x) + c
 
 
@@ -33,7 +34,7 @@ def plot_results():
     plt.figure()
     # First add original data
     plt.plot(optical_densities, concentrations, 'ro', label="Original Data")
-    plt.plot(log_concentrations, 'ko', label="log of concentrations")
+    #plt.plot(log_concentrations, 'ko', label="log of concentrations")
     # Second add the fitted line
     plt.plot(optical_densities, f(optical_densities, *popt), 'r-', label="Fitted curve")
     plt.legend()
